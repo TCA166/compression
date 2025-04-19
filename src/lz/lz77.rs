@@ -1,5 +1,12 @@
 use serde::{Deserialize, Serialize};
 
+/// A struct to represent an LZ77 entry
+/// Traditionally a LZ77 entry is represented as a tuple of (offset, length, next_char)
+/// where offset is the distance to the last occurrence of the string, length is the length of the
+/// string, and next_char is the next character in the string.
+///
+/// In this implementation, we use a struct to represent the entry.
+/// This is more Rust-idiomatic and allows us to use the `serde` crate for serialization and deserialization.
 #[derive(Debug)]
 pub struct LZ77entry<T> {
     offset: usize,
@@ -7,6 +14,7 @@ pub struct LZ77entry<T> {
     next_char: Option<T>,
 }
 
+/// A tuple to represent an LZ77 entry
 pub type LZ77tuple<T> = (usize, usize, Option<T>);
 
 impl<T> From<LZ77tuple<T>> for LZ77entry<T> {
@@ -45,6 +53,29 @@ impl<'de> Deserialize<'de> for LZ77entry<u8> {
     }
 }
 
+/// A function to encode a slice of data using the LZ77 algorithm
+/// The function takes a slice of data, a maximum offset, and a maximum length.
+/// It returns a vector of LZ77 entries.
+///
+/// ## Arguments
+///
+/// - `input`: A slice of data to be encoded.
+/// - `max_offset`: The maximum offset to search for matches.
+/// - `max_length`: The maximum length of matches.
+///
+/// ## Returns
+///
+/// A vector of LZ77 entries.
+///
+/// ## Example
+///
+/// ```
+/// use compress_lib::lz77_encode;
+/// let input = b"ABABABABA";
+/// let encoded = lz77_encode(input, 4, 4);
+/// assert!(encoded.len() < input.len());
+/// ```
+///
 pub fn lz77_encode<T: PartialEq + Clone>(
     input: &[T],
     max_offset: usize,
@@ -104,6 +135,27 @@ pub fn lz77_encode<T: PartialEq + Clone>(
     output
 }
 
+/// A function to decode a vector of LZ77 entries
+/// The function takes a vector of LZ77 entries and returns a vector of data.
+///
+/// ## Arguments
+///
+/// - `input`: A vector of LZ77 entries to be decoded.
+///
+/// ## Returns
+///
+/// A vector of data.
+///
+/// ## Example
+///
+/// ```
+/// use compress_lib::{lz77_decode, lz77_encode};
+/// let input = b"ABABABABA";
+/// let encoded = lz77_encode(input, 4, 4);
+/// assert!(encoded.len() < input.len());
+/// let decoded = lz77_decode(&encoded);
+/// assert_eq!(input.to_vec(), decoded);
+/// ```
 pub fn lz77_decode<T: Clone>(input: &[LZ77entry<T>]) -> Vec<T> {
     let mut output: Vec<T> = Vec::new();
 

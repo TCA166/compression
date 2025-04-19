@@ -2,12 +2,17 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
+/// A struct to represent an LZ78 entry
+/// It contains an index to the dictionary and the next character.
+/// The index is `None` if the entry is a new character.
+/// The next character is `None` if the entry is the last character in the string.
 #[derive(PartialEq)]
 pub struct LZ78entry<T> {
     index: Option<usize>,
     next_char: Option<T>,
 }
 
+/// A tuple to represent an LZ78 entry
 pub type LZ78tuple<T> = (Option<usize>, Option<T>);
 
 impl<T> From<LZ78tuple<T>> for LZ78entry<T> {
@@ -60,6 +65,28 @@ impl<T: Clone> LZ78entry<T> {
     }
 }
 
+/// A function to encode a slice of data using the LZ78 algorithm
+/// The function takes a slice of data, a maximum lookahead size, and a maximum dictionary size.
+/// It returns a vector of LZ78 entries.
+///
+/// ## Arguments
+///
+/// - `input`: A slice of data to be encoded.
+/// - `lookahead_max`: The maximum lookahead size.
+/// - `max_dictionary_size`: The maximum size of the dictionary.
+///
+/// ## Returns
+///
+/// A vector of LZ78 entries.
+///
+/// ## Example
+///
+/// ```
+/// use compress_lib::{lz78_encode, lz78_decode};
+/// let input: Vec<char> = "rabarbarbar".chars().collect();
+/// let encoded = lz78_encode(&input, 4, 4);
+/// assert!(encoded.len() < input.len());
+/// ```
 pub fn lz78_encode<T: Clone + PartialEq + Debug>(
     input: &[T],
     lookahead_max: usize,
@@ -72,14 +99,19 @@ pub fn lz78_encode<T: Clone + PartialEq + Debug>(
         // Find the longest prefix in the dictionary
         let mut longest_prefix: Option<usize> = None;
         for (idx, entry) in dictionary.iter().enumerate() {
-            for len in 1..=input.len() - i {
-                if len > lookahead_max {
-                    break;
+            let entry_len = entry.len();
+            if entry_len > lookahead_max
+                || i + entry_len > input.len()
+                || input[i..i + entry_len] != *entry
+            {
+                continue;
+            }
+            if let Some(longest) = &mut longest_prefix {
+                if entry_len > dictionary[*longest].len() {
+                    *longest = idx;
                 }
-                if input[i..i + len] == *entry {
-                    longest_prefix = Some(idx);
-                    break;
-                }
+            } else {
+                longest_prefix = Some(idx);
             }
         }
         let new_entry = if let Some(idx) = longest_prefix {
@@ -116,6 +148,28 @@ pub fn lz78_encode<T: Clone + PartialEq + Debug>(
     return output;
 }
 
+/// A function to decode a slice of data using the LZ78 algorithm
+/// The function takes a slice of LZ78 entries.
+/// It returns a vector of decoded data.
+///
+/// ## Arguments
+///
+/// - `input`: A slice of LZ78 entries to be decoded.
+///
+/// ## Returns
+///
+/// A vector of decoded data.
+///
+/// ## Example
+///
+/// ```
+/// use compress_lib::{lz78_encode, lz78_decode};
+/// let input: Vec<char> = "rabarbarbar".chars().collect();
+/// let encoded = lz78_encode(&input, 4, 4);
+/// assert!(encoded.len() < input.len());
+/// let decoded = lz78_decode(&encoded);
+/// assert_eq!(input, decoded);
+/// ```
 pub fn lz78_decode<T: Clone + PartialEq>(input: &[LZ78entry<T>]) -> Vec<T> {
     let mut output = Vec::new();
     let mut dictionary: Vec<Vec<T>> = Vec::with_capacity(input.len());

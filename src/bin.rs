@@ -28,6 +28,12 @@ enum Algorithm {
         #[arg(short, long, default_value = "255")]
         dictionary_size: usize,
     },
+    /// LZW compression algorithm
+    LZW {
+        /// The maximum offset to search for matches
+        #[arg(short, long, default_value = "255")]
+        lookahead_max: usize,
+    },
 }
 
 #[derive(Subcommand)]
@@ -37,6 +43,7 @@ enum Command {
         #[command(subcommand)]
         algorithm: Algorithm,
     },
+    /// Decompress the input file
     Decompress,
 }
 
@@ -79,6 +86,9 @@ fn main() {
                     &lz78_encode(&input_data, lookahead_max, dictionary_size),
                     file,
                 ),
+                Algorithm::LZW { lookahead_max } => {
+                    into_writer(&lzw_encode(&input_data, &input_data, lookahead_max), file)
+                }
             }
             .unwrap();
         }
