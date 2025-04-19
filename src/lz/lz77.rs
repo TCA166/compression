@@ -111,10 +111,11 @@ pub fn lz77_encode<T: PartialEq + Clone>(
 
         // If no match found, just output the next character
         if let Some(m) = m {
+            // check if we can get the next character
             let next_char = if i + m.length < input.len() {
                 Some(input[i + m.length].clone())
             } else {
-                None
+                None // if not, then we set it to None
             };
             output.push(LZ77entry {
                 offset: m.offset,
@@ -123,6 +124,7 @@ pub fn lz77_encode<T: PartialEq + Clone>(
             });
             i += m.length + 1;
         } else {
+            // we found nothing, so we just output the next character
             output.push(LZ77entry {
                 offset: 0,
                 length: 0,
@@ -160,10 +162,13 @@ pub fn lz77_decode<T: Clone>(input: &[LZ77entry<T>]) -> Vec<T> {
     let mut output: Vec<T> = Vec::new();
 
     for entry in input {
+        // foreach entry
         let start = output.len() - entry.offset;
         for i in 0..entry.length {
+            // copy the match
             output.push(output[start + i].clone());
         }
+        // if we have a next character, we push it to the output
         if let Some(next_char) = &entry.next_char {
             output.push(next_char.clone());
         }

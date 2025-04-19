@@ -1,6 +1,6 @@
 /// Module providing LZ77 compression and decompression functions
 mod lz77;
-pub use lz77::{LZ77entry, lz77_decode, lz77_encode};
+pub use lz77::{LZ77entry, LZ77tuple, lz77_decode, lz77_encode};
 
 /// Module providing LZ78 compression and decompression functions
 mod lz78;

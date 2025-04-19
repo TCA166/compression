@@ -94,18 +94,21 @@ pub fn lz78_encode<T: Clone + PartialEq + Debug>(
 ) -> Vec<LZ78entry<T>> {
     let mut output = Vec::new();
     let mut dictionary: Vec<Vec<T>> = Vec::with_capacity(max_dictionary_size);
+
     let mut i = 0;
     while i < input.len() {
         // Find the longest prefix in the dictionary
         let mut longest_prefix: Option<usize> = None;
         for (idx, entry) in dictionary.iter().enumerate() {
             let entry_len = entry.len();
+            // sanity check
             if entry_len > lookahead_max
                 || i + entry_len > input.len()
                 || input[i..i + entry_len] != *entry
             {
                 continue;
             }
+            // If we found a prefix, check if it's the longest one
             if let Some(longest) = &mut longest_prefix {
                 if entry_len > dictionary[*longest].len() {
                     *longest = idx;
@@ -173,7 +176,9 @@ pub fn lz78_encode<T: Clone + PartialEq + Debug>(
 pub fn lz78_decode<T: Clone + PartialEq>(input: &[LZ78entry<T>]) -> Vec<T> {
     let mut output = Vec::new();
     let mut dictionary: Vec<Vec<T>> = Vec::with_capacity(input.len());
+
     for entry in input {
+        // find the canonical form of the entry
         let resolved = entry.resolve(&dictionary);
         for el in &resolved {
             output.push(el.clone());

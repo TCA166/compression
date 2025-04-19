@@ -2,6 +2,13 @@
 name = "compression"
 version = "0.1.0"
 edition = "2024"
+authors = ["TCA"]
+description = "A library providing implementations of generic compression algorithms."
+license = "GPLv3"
+readme = "README.md"
+repository = "https://github.com/TCA166/compression"
+categories = ["compression", "algorithms", "command-line-utilities"]
+keywords = ["compression", "lzw", "lz77", "lz78"]
 
 [dependencies]
 ciborium = "0.2.2"

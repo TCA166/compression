@@ -31,8 +31,10 @@ pub fn lzw_encode<T: Clone + PartialEq>(
         dictionary.push(vec![i.clone()]);
     }
     let mut output: Vec<usize> = Vec::new();
+
     let mut i = 0;
     while i < input.len() {
+        // Find the longest prefix in the dictionary
         let mut longest_prefix: Option<usize> = None;
         for (idx, entry) in dictionary.iter().enumerate() {
             let entry_len = entry.len();
@@ -50,13 +52,16 @@ pub fn lzw_encode<T: Clone + PartialEq>(
                 longest_prefix = Some(idx);
             }
         }
+        // If we found a prefix, add it to the output
         if let Some(idx) = longest_prefix {
             i += dictionary[idx].len();
             output.push(idx);
+            // if it is ok, add the next entry to the dictionary
             if i < input.len() {
                 let next_char = input[i].clone();
                 let mut new_entry = dictionary[idx].clone();
                 new_entry.push(next_char);
+                // then add it to the dictionary
                 if !dictionary.contains(&new_entry) {
                     dictionary.push(new_entry);
                 }
@@ -97,15 +102,19 @@ pub fn lzw_decode<T: Clone + PartialEq>(input: &[usize], initial: &[T]) -> Vec<T
         dictionary.push(vec![i.clone()]);
     }
     let mut output: Vec<T> = Vec::new();
+
     let mut i = 0;
     while i < input.len() {
+        // we get the token
         let idx = input[i];
         if idx < dictionary.len() {
+            // if it is ok to read, we read it
             let entry = dictionary[idx].clone();
-            output.extend(entry.clone());
+            output.extend(entry.clone()); // decode it
             if i + 1 < input.len() {
                 let next_idx = input[i + 1];
                 if next_idx < dictionary.len() {
+                    // if it's a simple token we just add it to the dictionary
                     let next_entry = dictionary[next_idx].clone();
                     let mut new_entry = entry.clone();
                     new_entry.push(next_entry[0].clone());
@@ -113,8 +122,9 @@ pub fn lzw_decode<T: Clone + PartialEq>(input: &[usize], initial: &[T]) -> Vec<T
                         dictionary.push(new_entry);
                     }
                 } else {
+                    // well this is the unique case
                     let mut new_entry = entry.clone();
-                    new_entry.push(entry[0].clone());
+                    new_entry.push(entry[0].clone()); // instead of next_entry[0]
                     if !dictionary.contains(&new_entry) {
                         dictionary.push(new_entry);
                     }
