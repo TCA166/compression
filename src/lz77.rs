@@ -22,45 +22,54 @@ pub fn lz77_encode<T: DeserializeOwned + Serialize + PartialEq + Clone>(
     max_offset: usize,
     max_length: usize,
 ) -> Vec<LZ77entry<T>> {
+    /// A struct to represent a match in the input data
+    struct Match {
+        pub offset: usize,
+        pub length: usize,
+    }
+
     let mut output = Vec::new();
-    let mut i = 0;
+    let mut i = 0; // our position in the input
 
     while i < input.len() {
-        let mut offset = 0;
-        let mut length = 0;
+        let mut m: Option<Match> = None; // the longest match
 
         // Find the longest match
         for j in (i.saturating_sub(max_offset)..i).rev() {
             let mut k = 0;
+            // as long as we are within bounds, and the characters match
             while k < max_length && i + k < input.len() && input[j + k] == input[i + k] {
-                k += 1;
+                k += 1; // increment the length of the match
             }
-            if k > length {
-                length = k;
-                offset = i - j;
+            if k > m.as_ref().map_or(0, |m| m.length) {
+                // update the longest match
+                m = Some(Match {
+                    offset: i - j,
+                    length: k,
+                });
             }
         }
 
         // If no match found, just output the next character
-        if length == 0 {
+        if let Some(m) = m {
+            let next_char = if i + m.length < input.len() {
+                Some(input[i + m.length].clone())
+            } else {
+                None
+            };
+            output.push(LZ77entry {
+                offset: m.offset,
+                length: m.length,
+                next_char,
+            });
+            i += m.length + 1;
+        } else {
             output.push(LZ77entry {
                 offset: 0,
                 length: 0,
                 next_char: Some(input[i].clone()),
             });
             i += 1;
-        } else {
-            let next_char = if i + length < input.len() {
-                Some(input[i + length].clone())
-            } else {
-                None
-            };
-            output.push(LZ77entry {
-                offset,
-                length,
-                next_char,
-            });
-            i += length + 1;
         }
     }
 
