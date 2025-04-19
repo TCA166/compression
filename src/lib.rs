@@ -4,4 +4,4 @@ pub use lz::*;
 
 /// Module providing common transform functions
 mod transform;
-pub use transform::{decode_bwt, encode_bwt};
+pub use transform::*;

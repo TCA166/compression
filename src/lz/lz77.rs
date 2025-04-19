@@ -183,7 +183,7 @@ mod tests {
 
     #[test]
     fn test_lz77() {
-        let input = b"ABABABABA";
+        let input = b"RATABARBARATABARBARAT";
 
         let encoded = lz77_encode(input, 4, 4);
         let decoded = lz77_decode(&encoded);

@@ -83,8 +83,8 @@ impl<T: Clone> LZ78entry<T> {
 ///
 /// ```
 /// use compress_lib::{lz78_encode, lz78_decode};
-/// let input: Vec<char> = "rabarbarbar".chars().collect();
-/// let encoded = lz78_encode(&input, 4, 4);
+/// let input = b"rabarbarbar";
+/// let encoded = lz78_encode(input, 4, 4);
 /// assert!(encoded.len() < input.len());
 /// ```
 pub fn lz78_encode<T: Clone + PartialEq + Debug>(
@@ -167,13 +167,16 @@ pub fn lz78_encode<T: Clone + PartialEq + Debug>(
 ///
 /// ```
 /// use compress_lib::{lz78_encode, lz78_decode};
-/// let input: Vec<char> = "rabarbarbar".chars().collect();
-/// let encoded = lz78_encode(&input, 4, 4);
+/// let input = b"rabarbarbar";
+/// let encoded = lz78_encode(input, 4, 4);
 /// assert!(encoded.len() < input.len());
-/// let decoded = lz78_decode(&encoded);
-/// assert_eq!(input, decoded);
+/// let decoded = lz78_decode(&encoded, 4);
+/// assert_eq!(input, decoded.as_slice());
 /// ```
-pub fn lz78_decode<T: Clone + PartialEq>(input: &[LZ78entry<T>]) -> Vec<T> {
+pub fn lz78_decode<T: Clone + PartialEq>(
+    input: &[LZ78entry<T>],
+    max_dictionary_size: usize,
+) -> Vec<T> {
     let mut output = Vec::new();
     let mut dictionary: Vec<Vec<T>> = Vec::with_capacity(input.len());
 
@@ -183,7 +186,13 @@ pub fn lz78_decode<T: Clone + PartialEq>(input: &[LZ78entry<T>]) -> Vec<T> {
         for el in &resolved {
             output.push(el.clone());
         }
-        dictionary.push(resolved);
+        // if the dictionary is full, remove the oldest entry
+        if dictionary.len() == max_dictionary_size {
+            *dictionary.get_mut(0).unwrap() = resolved.clone();
+        } else {
+            // if not, add the new entry to the dictionary
+            dictionary.push(resolved.clone());
+        }
     }
     return output;
 }
@@ -205,10 +214,10 @@ mod tests {
 
     #[test]
     fn test_lz78_encode_decode() {
-        let input: Vec<char> = "rabarbarbar".chars().collect();
-        let encoded = lz78_encode(&input, 4, 4);
+        let input = b"TAMTARAMTAMTAMRAMTAT";
+        let encoded = lz78_encode(input, 4, 4);
         assert!(encoded.len() < input.len());
-        let decoded = lz78_decode(&encoded);
-        assert_eq!(input, decoded);
+        let decoded = lz78_decode(&encoded, 4);
+        assert_eq!(input, decoded.as_slice());
     }
 }

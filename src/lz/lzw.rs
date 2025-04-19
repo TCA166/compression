@@ -161,11 +161,11 @@ mod tests {
 
     #[test]
     fn test_rabarbar() {
-        let input: Vec<char> = "rabarbarbar".chars().collect();
-        let initial: Vec<char> = "rab".chars().collect();
-        let encoded = lzw_encode(&input, &initial, 4);
+        let input = b"rabarbarbar";
+        let initial = b"rab";
+        let encoded = lzw_encode(input, initial, 4);
         assert!(encoded.len() < input.len());
-        let decoded = lzw_decode(&encoded, &initial);
-        assert_eq!(input, decoded);
+        let decoded = lzw_decode(&encoded, initial);
+        assert_eq!(input, decoded.as_slice());
     }
 }

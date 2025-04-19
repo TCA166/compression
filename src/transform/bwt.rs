@@ -15,28 +15,24 @@
 /// use compress_lib::encode_bwt;
 /// let input = b"banana";
 /// let (encoded, index) = encode_bwt(input);
-/// assert_eq!(encoded, vec![b'b', b'n', b'n', b'a', b'a', b'a']);
+/// assert_eq!(encoded, vec![b'n', b'n', b'b', b'a', b'a', b'a']);
 /// assert_eq!(index, 3);
 /// ```
-pub fn encode_bwt<T: Clone + PartialEq + Ord>(input: &[T]) -> (Vec<T>, usize) {
-    let mut table = input
+pub fn encode_bwt<T: Clone + Ord>(input: &[T]) -> (Vec<T>, usize) {
+    let n = input.len();
+    let mut rotations: Vec<_> = (0..n).collect();
+    rotations.sort_by(|&a, &b| {
+        input[a..]
+            .iter()
+            .chain(&input[..a])
+            .cmp(input[b..].iter().chain(&input[..b]))
+    });
+    let result = rotations
         .iter()
-        .zip((0..input.len()).map(|i| {
-            input
-                .get(i.checked_sub(1).unwrap_or(input.len() - 1))
-                .unwrap()
-        }))
-        .enumerate()
-        .collect::<Vec<_>>();
-    table.sort_by(|a, b| a.1.0.cmp(&b.1.0).then_with(|| a.0.cmp(&b.0)));
-    let index = table
-        .iter()
-        .position(|x| x.0 == 0)
-        .expect("Failed to find the original index");
-    return (
-        table.iter().map(|x| x.1.1.clone()).collect::<Vec<_>>(),
-        index,
-    );
+        .map(|&i| input[(i + n - 1) % n].clone())
+        .collect();
+    let original_index = rotations.iter().position(|&i| i == 0).unwrap();
+    (result, original_index)
 }
 
 /// Decodes a Burrows-Wheeler Transform (BWT) encoded data.
@@ -58,7 +54,7 @@ pub fn encode_bwt<T: Clone + PartialEq + Ord>(input: &[T]) -> (Vec<T>, usize) {
 /// let decoded = decode_bwt(&encoded, index);
 /// assert_eq!(decoded, vec![b'b', b'a', b'n', b'a', b'n', b'a']);
 /// ```
-pub fn decode_bwt<T: Clone + PartialEq + Ord>(input: &[T], index: usize) -> Vec<T> {
+pub fn decode_bwt<T: Clone + Ord>(input: &[T], index: usize) -> Vec<T> {
     let mut table = input.iter().enumerate().collect::<Vec<_>>();
     table.sort_by(|a, b| a.1.cmp(&b.1));
     let (mut i, el) = table[index];
