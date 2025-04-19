@@ -1,7 +1,17 @@
 [package]
-name = "lz_kompresja"
+name = "compression"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+ciborium = "0.2.2"
+clap = { version = "4.5.37", features = ["derive"] }
 serde = { version = "1.0.219", features = ["derive"] }
+
+[lib]
+name = "compress_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "compress_bin"
+path = "src/bin.rs"

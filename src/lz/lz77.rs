@@ -1,13 +1,15 @@
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Debug)]
-pub struct LZ77entry<T: DeserializeOwned + Serialize> {
+#[derive(Debug)]
+pub struct LZ77entry<T> {
     offset: usize,
     length: usize,
     next_char: Option<T>,
 }
 
-impl<T: DeserializeOwned + Serialize> From<(usize, usize, Option<T>)> for LZ77entry<T> {
+pub type LZ77tuple<T> = (usize, usize, Option<T>);
+
+impl<T> From<LZ77tuple<T>> for LZ77entry<T> {
     fn from(tuple: (usize, usize, Option<T>)) -> Self {
         LZ77entry {
             offset: tuple.0,
@@ -17,7 +19,33 @@ impl<T: DeserializeOwned + Serialize> From<(usize, usize, Option<T>)> for LZ77en
     }
 }
 
-pub fn lz77_encode<T: DeserializeOwned + Serialize + PartialEq + Clone>(
+impl<T> Into<LZ77tuple<T>> for LZ77entry<T> {
+    fn into(self) -> (usize, usize, Option<T>) {
+        (self.offset, self.length, self.next_char)
+    }
+}
+
+impl Serialize for LZ77entry<u8> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let tuple = (self.offset, self.length, self.next_char);
+        tuple.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for LZ77entry<u8> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let tuple = <(usize, usize, Option<u8>)>::deserialize(deserializer)?;
+        Ok(LZ77entry::from(tuple))
+    }
+}
+
+pub fn lz77_encode<T: PartialEq + Clone>(
     input: &[T],
     max_offset: usize,
     max_length: usize,
@@ -76,7 +104,7 @@ pub fn lz77_encode<T: DeserializeOwned + Serialize + PartialEq + Clone>(
     output
 }
 
-pub fn lz77_decode<T: Serialize + DeserializeOwned + Clone>(input: &[LZ77entry<T>]) -> Vec<T> {
+pub fn lz77_decode<T: Clone>(input: &[LZ77entry<T>]) -> Vec<T> {
     let mut output: Vec<T> = Vec::new();
 
     for entry in input {
