@@ -48,8 +48,7 @@ impl<'de> Deserialize<'de> for LZ77entry<u8> {
     where
         D: serde::Deserializer<'de>,
     {
-        let tuple = <(usize, usize, u8)>::deserialize(deserializer)?;
-        Ok(LZ77entry::from(tuple))
+        Ok(LZ77entry::from(LZ77tuple::deserialize(deserializer)?))
     }
 }
 

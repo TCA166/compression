@@ -9,14 +9,14 @@ use serde::{Deserialize, Serialize};
 #[derive(PartialEq)]
 pub struct LZ78entry<T> {
     index: Option<usize>,
-    next_char: Option<T>,
+    next_char: T,
 }
 
 /// A tuple to represent an LZ78 entry
-pub type LZ78tuple<T> = (Option<usize>, Option<T>);
+pub type LZ78tuple<T> = (Option<usize>, T);
 
 impl<T> From<LZ78tuple<T>> for LZ78entry<T> {
-    fn from(tuple: (Option<usize>, Option<T>)) -> Self {
+    fn from(tuple: LZ78tuple<T>) -> Self {
         LZ78entry {
             index: tuple.0,
             next_char: tuple.1,
@@ -25,7 +25,7 @@ impl<T> From<LZ78tuple<T>> for LZ78entry<T> {
 }
 
 impl<T> Into<LZ78tuple<T>> for LZ78entry<T> {
-    fn into(self) -> (Option<usize>, Option<T>) {
+    fn into(self) -> LZ78tuple<T> {
         (self.index, self.next_char)
     }
 }
@@ -45,8 +45,7 @@ impl<'de> Deserialize<'de> for LZ78entry<u8> {
     where
         D: serde::Deserializer<'de>,
     {
-        let tuple = <(Option<usize>, Option<u8>)>::deserialize(deserializer)?;
-        Ok(LZ78entry::from(tuple))
+        Ok(LZ78entry::from(LZ78tuple::deserialize(deserializer)?))
     }
 }
 
@@ -58,9 +57,7 @@ impl<T: Clone> LZ78entry<T> {
         } else {
             Vec::with_capacity(1)
         };
-        if let Some(next_char) = &self.next_char {
-            res.push(next_char.clone());
-        }
+        res.push(self.next_char.clone());
         return res;
     }
 }
@@ -120,23 +117,16 @@ pub fn lz78_encode<T: Clone + PartialEq + Debug>(
         let new_entry = if let Some(idx) = longest_prefix {
             // If we found a prefix, add it to the output
             i += dictionary[idx].len() + 1;
-            if i - 1 >= input.len() {
-                LZ78entry {
-                    index: Some(idx),
-                    next_char: None,
-                }
-            } else {
-                LZ78entry {
-                    index: Some(idx),
-                    next_char: Some(input[i - 1].clone()),
-                }
+            LZ78entry {
+                index: Some(idx),
+                next_char: input[i - 1].clone(),
             }
         } else {
             // If we didn't find a prefix, add the current character to the dictionary
             i += 1;
             LZ78entry {
                 index: None,
-                next_char: Some(input[i - 1].clone()),
+                next_char: input[i - 1].clone(),
             }
         };
         let new_dict_entry = new_entry.resolve(&dictionary);
@@ -207,7 +197,7 @@ mod tests {
         let dictionary: Vec<Vec<char>> = vec![vec!['t'], vec!['t', 'e'], vec!['t', 'e', 's']];
         let target = LZ78entry {
             index: Some(2),
-            next_char: Some('t'),
+            next_char: 't',
         };
         assert_eq!(target.resolve(&dictionary), other);
     }
