@@ -103,7 +103,7 @@ pub fn lz78_encode<T: Clone + PartialEq + Debug>(
             let entry_len = entry.len();
             // sanity check
             if entry_len > lookahead_max
-                || i + entry_len > input.len()
+                || i + entry_len + 1 > input.len()
                 || input[i..i + entry_len] != *entry
             {
                 continue;

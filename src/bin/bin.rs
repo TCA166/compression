@@ -6,7 +6,10 @@ use std::{
     path::PathBuf,
 };
 
-use ciborium::{self, from_reader, into_writer};
+mod io;
+use io::{serialize_lz77, serialize_lz78, serialize_lzw};
+
+use ciborium::{self, from_reader};
 use clap::{Parser, Subcommand};
 
 const HEADER_SIZE: usize = 3;
@@ -93,9 +96,9 @@ fn main() {
                     lookahead_buffer_size,
                 } => {
                     file.write(LZ77_HEADER).unwrap();
-                    into_writer(
-                        &lz77_encode(&input_data, window_size, lookahead_buffer_size),
-                        file,
+                    serialize_lz77(
+                        lz77_encode(&input_data, window_size, lookahead_buffer_size),
+                        &mut file,
                     )
                 }
                 Algorithm::LZ78 {
@@ -104,14 +107,17 @@ fn main() {
                 } => {
                     file.write(LZ78_HEADER).unwrap();
                     file.write_all(&dictionary_size.to_le_bytes()).unwrap();
-                    into_writer(
-                        &lz78_encode(&input_data, lookahead_max, dictionary_size),
-                        file,
+                    serialize_lz78(
+                        lz78_encode(&input_data, lookahead_max, dictionary_size),
+                        &mut file,
                     )
                 }
                 Algorithm::LZW { lookahead_max } => {
                     file.write(LZW_HEADER).unwrap();
-                    into_writer(&lzw_encode(&input_data, LZW_DICIONARY, lookahead_max), file)
+                    serialize_lzw(
+                        lzw_encode(&input_data, LZW_DICIONARY, lookahead_max),
+                        &mut file,
+                    )
                 }
             }
             .unwrap();

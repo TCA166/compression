@@ -11,14 +11,14 @@ use serde::{Deserialize, Serialize};
 pub struct LZ77entry<T> {
     offset: usize,
     length: usize,
-    next_char: Option<T>,
+    next_char: T,
 }
 
 /// A tuple to represent an LZ77 entry
-pub type LZ77tuple<T> = (usize, usize, Option<T>);
+pub type LZ77tuple<T> = (usize, usize, T);
 
 impl<T> From<LZ77tuple<T>> for LZ77entry<T> {
-    fn from(tuple: (usize, usize, Option<T>)) -> Self {
+    fn from(tuple: LZ77tuple<T>) -> Self {
         LZ77entry {
             offset: tuple.0,
             length: tuple.1,
@@ -28,7 +28,7 @@ impl<T> From<LZ77tuple<T>> for LZ77entry<T> {
 }
 
 impl<T> Into<LZ77tuple<T>> for LZ77entry<T> {
-    fn into(self) -> (usize, usize, Option<T>) {
+    fn into(self) -> LZ77tuple<T> {
         (self.offset, self.length, self.next_char)
     }
 }
@@ -48,7 +48,7 @@ impl<'de> Deserialize<'de> for LZ77entry<u8> {
     where
         D: serde::Deserializer<'de>,
     {
-        let tuple = <(usize, usize, Option<u8>)>::deserialize(deserializer)?;
+        let tuple = <(usize, usize, u8)>::deserialize(deserializer)?;
         Ok(LZ77entry::from(tuple))
     }
 }
@@ -97,7 +97,7 @@ pub fn lz77_encode<T: PartialEq + Clone>(
         for j in (i.saturating_sub(max_offset)..i).rev() {
             let mut k = 0;
             // as long as we are within bounds, and the characters match
-            while k < max_length && i + k < input.len() && input[j + k] == input[i + k] {
+            while k < max_length && i + k + 1 < input.len() && input[j + k] == input[i + k] {
                 k += 1; // increment the length of the match
             }
             if k > m.as_ref().map_or(0, |m| m.length) {
@@ -111,16 +111,10 @@ pub fn lz77_encode<T: PartialEq + Clone>(
 
         // If no match found, just output the next character
         if let Some(m) = m {
-            // check if we can get the next character
-            let next_char = if i + m.length < input.len() {
-                Some(input[i + m.length].clone())
-            } else {
-                None // if not, then we set it to None
-            };
             output.push(LZ77entry {
                 offset: m.offset,
                 length: m.length,
-                next_char,
+                next_char: input[i + m.length].clone(),
             });
             i += m.length + 1;
         } else {
@@ -128,7 +122,7 @@ pub fn lz77_encode<T: PartialEq + Clone>(
             output.push(LZ77entry {
                 offset: 0,
                 length: 0,
-                next_char: Some(input[i].clone()),
+                next_char: input[i].clone(),
             });
             i += 1;
         }
@@ -168,10 +162,7 @@ pub fn lz77_decode<T: Clone>(input: &[LZ77entry<T>]) -> Vec<T> {
             // copy the match
             output.push(output[start + i].clone());
         }
-        // if we have a next character, we push it to the output
-        if let Some(next_char) = &entry.next_char {
-            output.push(next_char.clone());
-        }
+        output.push(entry.next_char.clone());
     }
 
     output
@@ -207,12 +198,12 @@ mod tests {
             LZ77entry {
                 offset: 0,
                 length: 0,
-                next_char: Some(1),
+                next_char: 1,
             },
             LZ77entry {
                 offset: 1,
                 length: 5,
-                next_char: Some(2),
+                next_char: 2,
             },
         ];
         let decoded = lz77_decode(&input);
