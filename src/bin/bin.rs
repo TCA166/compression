@@ -7,7 +7,7 @@ use std::{
 };
 
 mod io;
-use io::{serialize_lz77, serialize_lz78, serialize_lzw};
+use io::{deserialize_lz77, serialize_lz77, serialize_lz78, serialize_lzw};
 
 use ciborium::{self, from_reader};
 use clap::{Parser, Subcommand};
@@ -133,7 +133,7 @@ fn main() {
             let data = match &header {
                 LZ77_HEADER => {
                     let data: Vec<LZ77entry<u8>> =
-                        from_reader(file).expect("Failed to decode LZ77 data");
+                        deserialize_lz77(file).expect("Failed to decode LZ77 data");
                     lz77_decode(&data)
                 }
                 LZ78_HEADER => {
