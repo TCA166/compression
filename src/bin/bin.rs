@@ -19,6 +19,7 @@ const HEADER_SIZE: usize = 3;
 const LZ77_HEADER: &[u8; HEADER_SIZE] = b"l77";
 const LZ78_HEADER: &[u8; HEADER_SIZE] = b"l78";
 const LZW_HEADER: &[u8; HEADER_SIZE] = b"lzw";
+const STACK_HEADER: &[u8; HEADER_SIZE] = b"stk";
 
 const LZW_DICIONARY: &[u8; 256] = &{
     let mut array = [0u8; 256];
@@ -52,6 +53,12 @@ enum Algorithm {
     },
     /// LZW compression algorithm
     LZW {
+        /// The maximum offset to search for matches
+        #[arg(short, long, default_value = "255")]
+        lookahead_max: usize,
+    },
+    /// LZW compression algorithm with move-to-front and Burrows-Wheeler transform
+    STACK {
         /// The maximum offset to search for matches
         #[arg(short, long, default_value = "255")]
         lookahead_max: usize,
@@ -125,6 +132,18 @@ fn main() {
                         &mut file,
                     )
                 }
+                Algorithm::STACK { lookahead_max } => {
+                    file.write(STACK_HEADER).unwrap();
+                    let (bwt, index) = encode_bwt(&input_data);
+                    file.write_all(&index.to_le_bytes()).unwrap();
+                    let mut ordering = LZW_DICIONARY.to_vec();
+                    let mtf = encode_move_to_front(&bwt, &mut ordering);
+                    let mtf = mtf.into_iter().map(|x| x as u8).collect::<Vec<_>>();
+                    serialize_lzw(
+                        lzw_encode(mtf.as_slice(), LZW_DICIONARY, lookahead_max),
+                        &mut file,
+                    )
+                }
             }
             .unwrap();
         }
@@ -153,6 +172,20 @@ fn main() {
                     let data: Vec<usize> =
                         deserialize_lzw(&mut file).expect("Failed to decode LZW data");
                     lzw_decode(&data, LZW_DICIONARY)
+                }
+                STACK_HEADER => {
+                    let mut index_buf = [0; 8];
+                    file.read_exact(&mut index_buf)
+                        .expect("Failed to read index from input file");
+                    let index = usize::from_le_bytes(index_buf);
+                    let data: Vec<usize> =
+                        deserialize_lzw(&mut file).expect("Failed to decode LZW data");
+                    let mut ordering = LZW_DICIONARY.to_vec();
+                    let mtf = lzw_decode(&data, &ordering);
+                    let mtf = mtf.into_iter().map(|x| x as usize).collect::<Vec<_>>();
+                    let bwt = decode_move_to_front(mtf.as_slice(), &mut ordering);
+                    let bwt = bwt.into_iter().map(|x| x as u8).collect::<Vec<_>>();
+                    decode_bwt(bwt.as_slice(), index)
                 }
                 header => panic!("Unknown compression algorithm: {:?}", header),
             };
