@@ -98,6 +98,8 @@ fn main() {
                     file.write(LZ77_HEADER).unwrap();
                     serialize_lz77(
                         lz77_encode(&input_data, window_size, lookahead_buffer_size),
+                        window_size,
+                        lookahead_buffer_size,
                         &mut file,
                     )
                 }
@@ -109,6 +111,7 @@ fn main() {
                     file.write_all(&dictionary_size.to_le_bytes()).unwrap();
                     serialize_lz78(
                         lz78_encode(&input_data, lookahead_max, dictionary_size),
+                        dictionary_size,
                         &mut file,
                     )
                 }
