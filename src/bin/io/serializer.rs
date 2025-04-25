@@ -36,9 +36,7 @@ fn serialize_usize<W: Write>(value: usize, state: &mut W, num_bytes: u8) -> io::
         8 => {
             state.write_all(&value.to_le_bytes())?;
         }
-        _ => {
-            unreachable!()
-        }
+        _ => unreachable!(),
     }
     Ok(())
 }
