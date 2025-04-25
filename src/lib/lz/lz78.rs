@@ -1,7 +1,5 @@
 use std::fmt::Debug;
 
-use serde::{Deserialize, Serialize};
-
 /// A struct to represent an LZ78 entry
 /// It contains an index to the dictionary and the next character.
 /// The index is `None` if the entry is a new character.
@@ -30,22 +28,28 @@ impl<T> Into<LZ78tuple<T>> for LZ78entry<T> {
     }
 }
 
-impl Serialize for LZ78entry<u8> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let tuple = (self.index, self.next_char);
-        tuple.serialize(serializer)
-    }
-}
+#[cfg(feature = "serde")]
+mod lz78_serde {
+    use super::*;
+    use serde::{Deserialize, Serialize};
 
-impl<'de> Deserialize<'de> for LZ78entry<u8> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Ok(LZ78entry::from(LZ78tuple::deserialize(deserializer)?))
+    impl Serialize for LZ78entry<u8> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let tuple = (self.index, self.next_char);
+            tuple.serialize(serializer)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for LZ78entry<u8> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            Ok(LZ78entry::from(LZ78tuple::deserialize(deserializer)?))
+        }
     }
 }
 

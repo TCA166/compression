@@ -1,5 +1,5 @@
-mod serializer;
-pub use serializer::{serialize_lz77, serialize_lz78, serialize_lzw};
+/// Provides serialization routines for the `io` module.
+pub mod serializer;
 
-mod deserializer;
-pub use deserializer::deserialize_lz77;
+/// Provides deserialization routines for the `io` module.
+pub mod deserializer;

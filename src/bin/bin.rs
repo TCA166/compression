@@ -6,10 +6,13 @@ use std::{
     path::PathBuf,
 };
 
+/// Module providing a simple serialization and deserialization interface, optimized for output size.
 mod io;
-use io::{deserialize_lz77, serialize_lz77, serialize_lz78, serialize_lzw};
+use io::{
+    deserializer::{deserialize_lz77, deserialize_lz78, deserialize_lzw},
+    serializer::{serialize_lz77, serialize_lz78, serialize_lzw},
+};
 
-use ciborium::{self, from_reader};
 use clap::{Parser, Subcommand};
 
 const HEADER_SIZE: usize = 3;
@@ -133,7 +136,7 @@ fn main() {
             let data = match &header {
                 LZ77_HEADER => {
                     let data: Vec<LZ77entry<u8>> =
-                        deserialize_lz77(file).expect("Failed to decode LZ77 data");
+                        deserialize_lz77(&mut file).expect("Failed to decode LZ77 data");
                     lz77_decode(&data)
                 }
                 LZ78_HEADER => {
@@ -143,14 +146,15 @@ fn main() {
                     let dictionary_size = usize::from_le_bytes(dictionary_size_buf);
 
                     let data: Vec<LZ78entry<u8>> =
-                        from_reader(file).expect("Failed to decode LZ78 data");
+                        deserialize_lz78(&mut file).expect("Failed to decode LZ78 data");
                     lz78_decode(&data, dictionary_size)
                 }
                 LZW_HEADER => {
-                    let data: Vec<usize> = from_reader(file).expect("Failed to decode LZW data");
+                    let data: Vec<usize> =
+                        deserialize_lzw(&mut file).expect("Failed to decode LZW data");
                     lzw_decode(&data, LZW_DICIONARY)
                 }
-                _ => panic!("Unknown compression algorithm"),
+                header => panic!("Unknown compression algorithm: {:?}", header),
             };
             let mut output_file = File::create(&args.output).expect("Failed to create output file");
             output_file

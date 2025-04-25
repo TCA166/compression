@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 /// A struct to represent an LZ77 entry
 /// Traditionally a LZ77 entry is represented as a tuple of (offset, length, next_char)
 /// where offset is the distance to the last occurrence of the string, length is the length of the
@@ -33,22 +31,28 @@ impl<T> Into<LZ77tuple<T>> for LZ77entry<T> {
     }
 }
 
-impl Serialize for LZ77entry<u8> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let tuple = (self.offset, self.length, self.next_char);
-        tuple.serialize(serializer)
-    }
-}
+#[cfg(feature = "serde")]
+mod lz77_serde {
+    use super::*;
+    use serde::{Deserialize, Serialize};
 
-impl<'de> Deserialize<'de> for LZ77entry<u8> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Ok(LZ77entry::from(LZ77tuple::deserialize(deserializer)?))
+    impl Serialize for LZ77entry<u8> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let tuple = (self.offset, self.length, self.next_char);
+            tuple.serialize(serializer)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for LZ77entry<u8> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            Ok(LZ77entry::from(LZ77tuple::deserialize(deserializer)?))
+        }
     }
 }
 
