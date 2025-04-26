@@ -22,7 +22,7 @@ impl<T, W: Integer + Clone> NodeInternal<T, W> {
 struct Node<T, W: Integer + Clone> {
     frequency: W,
     left: NodeInternal<T, W>,
-    right: NodeInternal<T, W>,
+    right: Option<NodeInternal<T, W>>,
 }
 
 /// A tree structure for the huffman encoding
@@ -62,7 +62,7 @@ impl<T: Clone + PartialEq, W: Integer + Clone> HuffmanEncoding<T, W> {
             let new_node = Node {
                 frequency: left.frequency() + right.frequency(),
                 left: left.clone(),
-                right: right.clone(),
+                right: Some(right.clone()),
             };
             // insert the new node back into the list
             nodes.push(NodeInternal::Pointer(new_node.into()));
@@ -76,7 +76,7 @@ impl<T: Clone + PartialEq, W: Integer + Clone> HuffmanEncoding<T, W> {
         let root = Node {
             frequency: left.frequency() + right.frequency(),
             left: left.clone(),
-            right: right.clone(),
+            right: Some(right.clone()),
         };
         HuffmanEncoding {
             root: Some(Box::new(root)),
@@ -121,15 +121,17 @@ impl<T: Clone + PartialEq, W: Integer + Clone> HuffmanEncoding<T, W> {
                         stack.push((left_node, new_encoding));
                     }
                 }
-                encoding.push(true);
-                match &node.right {
-                    NodeInternal::Value((v, _)) => {
-                        if v == value {
-                            return Some(encoding);
+                if let Some(ref right) = node.right {
+                    encoding.push(true);
+                    match right {
+                        NodeInternal::Value((v, _)) => {
+                            if v == value {
+                                return Some(encoding);
+                            }
                         }
-                    }
-                    NodeInternal::Pointer(right_node) => {
-                        stack.push((right_node, encoding));
+                        NodeInternal::Pointer(right_node) => {
+                            stack.push((right_node, encoding));
+                        }
                     }
                 }
             }
@@ -138,6 +140,80 @@ impl<T: Clone + PartialEq, W: Integer + Clone> HuffmanEncoding<T, W> {
             return None;
         }
     }
+
+    /*
+    /// Encodes a value into a bit vector, while changing the weights and rebalancing the tree
+    pub fn encode_value_mut(&mut self, value: &T) -> BitVec {
+        if let Some(root) = &mut self.root {
+            let mut stack = vec![(root, BitVec::new())];
+            let mut out_encoding = None;
+            while let Some((node, mut encoding)) = stack.pop() {
+                match &mut node.left {
+                    NodeInternal::Value((v, weight)) => {
+                        if v == value {
+                            encoding.push(false);
+                            *weight = weight.clone() + W::one();
+                            out_encoding = Some(encoding.clone());
+                            break;
+                        }
+                    }
+                    NodeInternal::Pointer(left_node) => {
+                        let mut new_encoding = encoding.clone();
+                        new_encoding.push(false);
+                        stack.push((left_node, new_encoding));
+                    }
+                }
+                if let Some(ref mut right) = node.right {
+                    encoding.push(true);
+                    match right {
+                        NodeInternal::Value((v, weight)) => {
+                            if v == value {
+                                *weight = weight.clone() + W::one();
+                                out_encoding = Some(encoding.clone());
+                                break;
+                            }
+                        }
+                        NodeInternal::Pointer(right_node) => {
+                            stack.push((right_node, encoding));
+                        }
+                    }
+                }
+            }
+            if let Some(encoding) = out_encoding {
+                // increase the weights
+                let mut node = root;
+                for bit in encoding.iter() {
+                    match bit.deref() {
+                        false => match &mut node.left {
+                            NodeInternal::Value((_, weight)) => *weight = weight.clone() + W::one(),
+                            NodeInternal::Pointer(left_node) => node = left_node,
+                        },
+                        true => match &mut node.right.unwrap() {
+                            NodeInternal::Value((_, weight)) => *weight = weight.clone() + W::one(),
+                            NodeInternal::Pointer(right_node) => node = right_node,
+                        },
+                    }
+                }
+                return encoding;
+            } else {
+                // find a node to insert the new value and balance the tree
+                let mut stack = vec![(root, BitVec::new())];
+            }
+        } else {
+            // create a root node if it doesn't exist
+            let new_node = Node {
+                frequency: W::one(),
+                left: NodeInternal::Value((value.clone(), W::one())),
+                right: None,
+            };
+            self.root = Some(Box::new(new_node));
+            // return the encoding for the new node
+            let mut encoding = BitVec::new();
+            encoding.push(false);
+            return encoding;
+        }
+    }
+    */
 
     /// Decodes a bit vector into a value
     ///
@@ -171,10 +247,16 @@ impl<T: Clone + PartialEq, W: Integer + Clone> HuffmanEncoding<T, W> {
                         NodeInternal::Value((v, _)) => return Some(v.clone()),
                         NodeInternal::Pointer(left_node) => node = left_node,
                     },
-                    true => match &node.right {
-                        NodeInternal::Value((v, _)) => return Some(v.clone()),
-                        NodeInternal::Pointer(right_node) => node = right_node,
-                    },
+                    true => {
+                        if let Some(ref right) = node.right {
+                            match right {
+                                NodeInternal::Value((v, _)) => return Some(v.clone()),
+                                NodeInternal::Pointer(right_node) => node = right_node,
+                            }
+                        } else {
+                            return None;
+                        }
+                    }
                 }
             }
             None
