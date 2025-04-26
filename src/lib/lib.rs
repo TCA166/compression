@@ -6,5 +6,6 @@ pub use lz::*;
 mod transform;
 pub use transform::*;
 
+/// Module providing common encoding algorithms
 mod encoding;
 pub use encoding::*;
