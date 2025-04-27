@@ -11,7 +11,7 @@ categories = ["compression", "algorithms", "command-line-utilities"]
 keywords = ["compression", "lzw", "lz77", "lz78"]
 
 [dependencies]
-bits-io = "0.5.0"
+bits-io = "0.5.2"
 clap = { version = "4.5.37", features = ["derive"] }
 num = "0.4.3"
 num-traits = "0.2.19"

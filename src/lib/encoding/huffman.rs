@@ -1,39 +1,46 @@
 use std::ops::Deref;
 
-use bits_io::bit_types::BitVec;
+use bits_io::{bit_types::BitVec, bitvec};
 use num::Integer;
 
-#[derive(Clone)]
-enum NodeInternal<T, W: Integer + Clone> {
-    Value((T, W)),
-    Pointer(Box<Node<T, W>>),
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct HeapValue<T: Clone + Eq, W: Integer + Clone> {
+    value: T,
+    frequency: W,
 }
 
-impl<T, W: Integer + Clone> NodeInternal<T, W> {
-    fn frequency(&self) -> W {
-        match self {
-            NodeInternal::Value((_, frequency)) => frequency.clone(),
-            NodeInternal::Pointer(node) => node.frequency.clone(),
-        }
+impl<T: Clone + Eq, W: Integer + Clone> PartialOrd for HeapValue<T, W> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 
-#[derive(Clone)]
-struct Node<T, W: Integer + Clone> {
-    frequency: W,
-    left: NodeInternal<T, W>,
-    right: Option<NodeInternal<T, W>>,
+impl<T: Clone + Eq, W: Integer + Clone> Ord for HeapValue<T, W> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.frequency.cmp(&other.frequency)
+    }
 }
 
-/// A tree structure for the huffman encoding
-pub struct HuffmanEncoding<T: Clone + PartialEq, W: Integer + Clone> {
-    root: Option<Box<Node<T, W>>>,
+/// A tree structure for the huffman encoding.
+/// Under the hood, it is a binary heap.
+pub struct HuffmanEncoding<T: Clone + Eq, W: Integer + Clone> {
+    root: Vec<HeapValue<T, W>>,
 }
 
-impl<T: Clone + PartialEq, W: Integer + Clone> HuffmanEncoding<T, W> {
+#[inline(always)]
+fn left_child_index(index: usize) -> usize {
+    index * 2 + 1
+}
+
+#[inline(always)]
+fn right_child_index(index: usize) -> usize {
+    index * 2 + 2
+}
+
+impl<T: Clone + Eq, W: Integer + Clone> HuffmanEncoding<T, W> {
     /// Creates a new empty HuffmanEncoding
     pub fn new() -> Self {
-        HuffmanEncoding { root: None }
+        HuffmanEncoding { root: Vec::new() }
     }
 
     /// Creates a new HuffmanEncoding with the given weights
@@ -46,40 +53,46 @@ impl<T: Clone + PartialEq, W: Integer + Clone> HuffmanEncoding<T, W> {
     ///
     /// A new HuffmanEncoding instance.
     pub fn with_weights(weights: &[(T, W)]) -> Self {
-        // sort the weights
-        let mut sorted_weights = weights.to_vec();
-        sorted_weights.sort_by(|a, b| a.1.cmp(&b.1));
-        // create the huffman tree
-        let mut nodes: Vec<NodeInternal<T, W>> = sorted_weights
+        let mut heap = weights
             .iter()
-            .map(|(value, frequency)| NodeInternal::Value((value.clone(), frequency.clone())))
-            .collect();
-        while nodes.len() > 2 {
-            // pop the two smallest nodes
-            let left = nodes.remove(0);
-            let right = nodes.remove(0);
-            // create a new node with the sum of the frequencies
-            let new_node = Node {
-                frequency: left.frequency() + right.frequency(),
-                left: left.clone(),
-                right: Some(right.clone()),
-            };
-            // insert the new node back into the list
-            nodes.push(NodeInternal::Pointer(new_node.into()));
-            // sort the list again
-            nodes.sort_by(|a, b| a.frequency().cmp(&b.frequency()));
+            .map(|(value, frequency)| HeapValue {
+                value: value.clone(),
+                frequency: frequency.clone(),
+            })
+            .collect::<Vec<_>>();
+        heap.sort_by(|a, b| b.cmp(a));
+        HuffmanEncoding { root: heap }
+    }
+
+    fn encode_and_index(&self, value: &T) -> Option<(BitVec, usize)> {
+        let mut stack = vec![(0, bitvec![0; 1])];
+        while let Some((index, bits)) = stack.pop() {
+            if index < self.root.len() {
+                if self.root[index].value == *value {
+                    return Some((bits, index));
+                } else {
+                    let mut left = bits.clone();
+                    left.push(false);
+                    stack.push((left_child_index(index), left));
+                    let mut right = bits.clone();
+                    right.push(true);
+                    stack.push((right_child_index(index), right));
+                }
+            }
         }
-        // pop the last two nodes
-        let left = nodes.remove(0);
-        let right = nodes.remove(0);
-        // create the root node
-        let root = Node {
-            frequency: left.frequency() + right.frequency(),
-            left: left.clone(),
-            right: Some(right.clone()),
-        };
-        HuffmanEncoding {
-            root: Some(Box::new(root)),
+        None
+    }
+
+    fn reorder_index(&mut self, index: usize) {
+        let mut move_to_ptr = index;
+        while move_to_ptr > 0 {
+            let parent_index = (move_to_ptr - 1) / 2;
+            if self.root[move_to_ptr] > self.root[parent_index] {
+                self.root.swap(move_to_ptr, parent_index);
+                move_to_ptr = parent_index;
+            } else {
+                break;
+            }
         }
     }
 
@@ -100,120 +113,79 @@ impl<T: Clone + PartialEq, W: Integer + Clone> HuffmanEncoding<T, W> {
     /// use bits_io::bits;
     /// let codec = HuffmanEncoding::with_weights(&[(b'a', 5), (b'b', 9)]);
     /// let encoded = codec.encode_value(&b'a').unwrap();
-    /// assert_eq!(encoded.as_bitslice(), bits![0]);
-    /// let encoded = codec.encode_value(&b'b').unwrap();
     /// assert_eq!(encoded.as_bitslice(), bits![1]);
+    /// let encoded = codec.encode_value(&b'b').unwrap();
+    /// assert_eq!(encoded.as_bitslice(), bits![0]);
     /// ```
     pub fn encode_value(&self, value: &T) -> Option<BitVec> {
-        if let Some(root) = &self.root {
-            let mut stack = vec![(root, BitVec::new())];
-            while let Some((node, mut encoding)) = stack.pop() {
-                match &node.left {
-                    NodeInternal::Value((v, _)) => {
-                        if v == value {
-                            encoding.push(false);
-                            return Some(encoding);
-                        }
-                    }
-                    NodeInternal::Pointer(left_node) => {
-                        let mut new_encoding = encoding.clone();
-                        new_encoding.push(false);
-                        stack.push((left_node, new_encoding));
-                    }
-                }
-                if let Some(ref right) = node.right {
-                    encoding.push(true);
-                    match right {
-                        NodeInternal::Value((v, _)) => {
-                            if v == value {
-                                return Some(encoding);
-                            }
-                        }
-                        NodeInternal::Pointer(right_node) => {
-                            stack.push((right_node, encoding));
-                        }
-                    }
-                }
-            }
-            None
+        if let Some((bits, _)) = self.encode_and_index(value) {
+            Some(bits)
         } else {
-            return None;
+            None
         }
     }
 
-    /*
-    /// Encodes a value into a bit vector, while changing the weights and rebalancing the tree
+    /// Encodes a value into a bit vector, ensuring the value is present in the heap
+    /// Also increases the frequency of the value in the heap, ensuring future encodings are better
+    ///
+    /// ## Arguments
+    ///
+    /// - `value`: The value to be encoded.
+    ///
+    /// ## Returns
+    ///
+    /// A BitVec representing the encoded value.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// use compress_lib::HuffmanEncoding;
+    /// use bits_io::bits;
+    /// let mut codec = HuffmanEncoding::with_weights(&[(b'a', 5), (b'b', 5), (b'c', 5)]);
+    /// assert_eq!(codec.encode_value_mut(&b'c').as_bitslice(), bits![0, 1]);
+    /// assert_eq!(codec.encode_value_mut(&b'c').as_bitslice(), bits![0]);
+    /// ```
     pub fn encode_value_mut(&mut self, value: &T) -> BitVec {
-        if let Some(root) = &mut self.root {
-            let mut stack = vec![(root, BitVec::new())];
-            let mut out_encoding = None;
-            while let Some((node, mut encoding)) = stack.pop() {
-                match &mut node.left {
-                    NodeInternal::Value((v, weight)) => {
-                        if v == value {
-                            encoding.push(false);
-                            *weight = weight.clone() + W::one();
-                            out_encoding = Some(encoding.clone());
-                            break;
-                        }
-                    }
-                    NodeInternal::Pointer(left_node) => {
-                        let mut new_encoding = encoding.clone();
-                        new_encoding.push(false);
-                        stack.push((left_node, new_encoding));
-                    }
-                }
-                if let Some(ref mut right) = node.right {
-                    encoding.push(true);
-                    match right {
-                        NodeInternal::Value((v, weight)) => {
-                            if v == value {
-                                *weight = weight.clone() + W::one();
-                                out_encoding = Some(encoding.clone());
-                                break;
-                            }
-                        }
-                        NodeInternal::Pointer(right_node) => {
-                            stack.push((right_node, encoding));
-                        }
-                    }
-                }
-            }
-            if let Some(encoding) = out_encoding {
-                // increase the weights
-                let mut node = root;
-                for bit in encoding.iter() {
-                    match bit.deref() {
-                        false => match &mut node.left {
-                            NodeInternal::Value((_, weight)) => *weight = weight.clone() + W::one(),
-                            NodeInternal::Pointer(left_node) => node = left_node,
-                        },
-                        true => match &mut node.right.unwrap() {
-                            NodeInternal::Value((_, weight)) => *weight = weight.clone() + W::one(),
-                            NodeInternal::Pointer(right_node) => node = right_node,
-                        },
-                    }
-                }
-                return encoding;
-            } else {
-                // find a node to insert the new value and balance the tree
-                let mut stack = vec![(root, BitVec::new())];
-            }
+        if let Some((bits, index)) = self.encode_and_index(value) {
+            // Increase the frequency of the value in the heap
+            self.root[index].frequency = self.root[index].frequency.clone() + W::one();
+            // Reorder the heap to maintain the heap property
+            self.reorder_index(index);
+            // Return the bits
+            return bits;
         } else {
-            // create a root node if it doesn't exist
-            let new_node = Node {
+            // if the value is not found, we need to add it to the heap
+            let new_value = HeapValue {
+                value: value.clone(),
                 frequency: W::one(),
-                left: NodeInternal::Value((value.clone(), W::one())),
-                right: None,
             };
-            self.root = Some(Box::new(new_node));
-            // return the encoding for the new node
-            let mut encoding = BitVec::new();
-            encoding.push(false);
-            return encoding;
+            self.root.push(new_value);
+            return self.encode_value(value).unwrap();
         }
     }
-    */
+
+    fn decode_index<B: Deref<Target = bool>, I: Iterator<Item = B>>(
+        &self,
+        input: I,
+    ) -> Option<usize> {
+        let mut input = input.into_iter();
+        let mut index = if let Some(index) = input.next() {
+            if *index { 1 } else { 0 }
+        } else {
+            return None;
+        };
+        for bit in input {
+            index = if *bit {
+                right_child_index(index)
+            } else {
+                left_child_index(index)
+            };
+            if index >= self.root.len() {
+                return None;
+            }
+        }
+        Some(index)
+    }
 
     /// Decodes a bit vector into a value
     ///
@@ -239,27 +211,33 @@ impl<T: Clone + PartialEq, W: Integer + Clone> HuffmanEncoding<T, W> {
         &self,
         input: I,
     ) -> Option<T> {
-        if let Some(root) = &self.root {
-            let mut node = root;
-            for bit in input {
-                match bit.deref() {
-                    false => match &node.left {
-                        NodeInternal::Value((v, _)) => return Some(v.clone()),
-                        NodeInternal::Pointer(left_node) => node = left_node,
-                    },
-                    true => {
-                        if let Some(ref right) = node.right {
-                            match right {
-                                NodeInternal::Value((v, _)) => return Some(v.clone()),
-                                NodeInternal::Pointer(right_node) => node = right_node,
-                            }
-                        } else {
-                            return None;
-                        }
-                    }
-                }
-            }
-            None
+        if let Some(index) = self.decode_index(input) {
+            return Some(self.root[index].value.clone());
+        } else {
+            return None;
+        }
+    }
+
+    /// Decodes a bit vector into a value
+    /// Also increases the frequency of the value in the heap, ensuring future encodings are better
+    ///
+    /// ## Arguments
+    ///
+    /// - `input`: An iterator over bits representing the encoded value.
+    ///
+    /// ## Returns
+    ///
+    /// A value of type T if the decoding is successful, otherwise None.
+    pub fn decode_value_mut<B: Deref<Target = bool>, I: Iterator<Item = B>>(
+        &mut self,
+        input: I,
+    ) -> Option<T> {
+        if let Some(index) = self.decode_index(input) {
+            // Increase the frequency of the value in the heap
+            self.root[index].frequency = self.root[index].frequency.clone() + W::one();
+            // Reorder the heap to maintain the heap property
+            self.reorder_index(index);
+            return Some(self.root[index].value.clone());
         } else {
             return None;
         }
@@ -275,34 +253,68 @@ mod tests {
     #[test]
     fn test_huffman_encoding() {
         let weights = [
-            (b'a', 5),
-            (b'b', 9),
-            (b'c', 12),
-            (b'd', 13),
-            (b'e', 16),
-            (b'f', 45),
+            ('a', 5),
+            ('b', 9),
+            ('c', 12),
+            ('d', 13),
+            ('e', 16),
+            ('f', 45),
         ];
         let huffman = HuffmanEncoding::with_weights(&weights);
-        assert_eq!(huffman.encode_value(&b'f').unwrap().as_bitslice(), bits![0]);
+        let mut len = huffman.encode_value(&'f').unwrap().as_bitslice().len();
+        // assert that the length of the encoding is non-decreasing with decreasing frequency
+        for (value, _) in weights.iter().rev() {
+            let new_len = huffman.encode_value(value).unwrap().as_bitslice().len();
+            assert!(new_len >= len);
+            len = new_len;
+        }
+        assert_eq!(huffman.encode_value(&'f').unwrap().as_bitslice(), bits![0]);
         assert_eq!(
-            huffman.encode_value(&b'a').unwrap().as_bitslice(),
-            bits![1, 1, 0, 0]
+            huffman.encode_value(&'a').unwrap().as_bitslice(),
+            bits![0, 1, 0]
+        );
+        assert_eq!(
+            huffman.encode_value(&'b').unwrap().as_bitslice(),
+            bits![1, 1]
         );
     }
 
     #[test]
     fn test_huffman_decoding() {
         let weights = [
-            (b'a', 5),
-            (b'b', 9),
-            (b'c', 12),
-            (b'd', 13),
-            (b'e', 16),
-            (b'f', 45),
+            ('a', 5),
+            ('b', 9),
+            ('c', 12),
+            ('d', 13),
+            ('e', 16),
+            ('f', 45),
         ];
         let huffman = HuffmanEncoding::with_weights(&weights);
-        let encoded = huffman.encode_value(&b'a').unwrap();
+        let encoded = huffman.encode_value(&'a').unwrap();
         let decoded = huffman.decode_value(encoded.as_bitslice().iter()).unwrap();
-        assert_eq!(decoded, b'a');
+        assert_eq!(decoded, 'a');
+    }
+
+    #[test]
+    fn test_dynamic_huffman() {
+        let mut huffman: HuffmanEncoding<char, u16> = HuffmanEncoding::new();
+        let weights = [
+            ('a', 5),
+            ('b', 9),
+            ('c', 12),
+            ('d', 13),
+            ('e', 16),
+            ('f', 45),
+        ];
+        let mut encoding = Vec::new();
+        for (value, _) in weights.iter() {
+            encoding.push(huffman.encode_value_mut(value));
+        }
+        for (encoded, (value, _)) in encoding.iter().zip(weights.iter()) {
+            let decoded = huffman
+                .decode_value_mut(encoded.as_bitslice().iter())
+                .unwrap();
+            assert_eq!(decoded, *value);
+        }
     }
 }
