@@ -40,6 +40,7 @@ pub fn encode_bwt<T: Clone + Ord>(input: &[T]) -> (Vec<T>, usize) {
 /// ## Arguments
 ///
 /// - `input`: A slice of data to be decoded.
+/// - `index`: The index of the original data.
 ///
 /// ## Returns
 ///

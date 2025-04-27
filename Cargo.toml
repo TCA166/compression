@@ -20,7 +20,6 @@ serde = { version = "1.0.219", optional = true }
 [features]
 serde = ["dep:serde"]
 
-
 [lib]
 name = "generic_compression"
 path = "src/lib/lib.rs"

@@ -152,6 +152,7 @@ pub fn lz78_encode<T: Clone + PartialEq + Debug>(
 /// ## Arguments
 ///
 /// - `input`: A slice of LZ78 entries to be decoded.
+/// - `max_dictionary_size`: The maximum size of the dictionary.
 ///
 /// ## Returns
 ///
