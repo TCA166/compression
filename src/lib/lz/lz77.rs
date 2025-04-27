@@ -73,7 +73,7 @@ mod lz77_serde {
 /// ## Example
 ///
 /// ```
-/// use compress_lib::lz77_encode;
+/// use generic_compression::lz77_encode;
 /// let input = b"ABABABABA";
 /// let encoded = lz77_encode(input, 4, 4);
 /// assert!(encoded.len() < input.len());
@@ -148,7 +148,7 @@ pub fn lz77_encode<T: PartialEq + Clone>(
 /// ## Example
 ///
 /// ```
-/// use compress_lib::{lz77_decode, lz77_encode};
+/// use generic_compression::{lz77_decode, lz77_encode};
 /// let input = b"ABABABABA";
 /// let encoded = lz77_encode(input, 4, 4);
 /// assert!(encoded.len() < input.len());

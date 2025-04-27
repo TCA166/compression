@@ -109,7 +109,7 @@ impl<T: Clone + Eq, W: Integer + Clone> HuffmanEncoding<T, W> {
     /// ## Example
     ///
     /// ```
-    /// use compress_lib::HuffmanEncoding;
+    /// use generic_compression::HuffmanEncoding;
     /// use bits_io::bits;
     /// let codec = HuffmanEncoding::with_weights(&[(b'a', 5), (b'b', 9)]);
     /// let encoded = codec.encode_value(&b'a').unwrap();
@@ -139,7 +139,7 @@ impl<T: Clone + Eq, W: Integer + Clone> HuffmanEncoding<T, W> {
     /// ## Example
     ///
     /// ```
-    /// use compress_lib::HuffmanEncoding;
+    /// use generic_compression::HuffmanEncoding;
     /// use bits_io::bits;
     /// let mut codec = HuffmanEncoding::with_weights(&[(b'a', 5), (b'b', 5), (b'c', 5)]);
     /// assert_eq!(codec.encode_value_mut(&b'c').as_bitslice(), bits![0, 1]);
@@ -200,7 +200,7 @@ impl<T: Clone + Eq, W: Integer + Clone> HuffmanEncoding<T, W> {
     /// ## Example
     ///
     /// ```
-    /// use compress_lib::HuffmanEncoding;
+    /// use generic_compression::HuffmanEncoding;
     /// use bits_io::bits;
     /// let codec = HuffmanEncoding::with_weights(&[(b'a', 5), (b'b', 9)]);
     /// let encoded = codec.encode_value(&b'a').unwrap();

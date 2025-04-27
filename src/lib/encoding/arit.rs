@@ -35,7 +35,7 @@ fn weights_to_ranges<T: Hash + Eq, U: Integer + Clone + NumOps + NumAssignOps + 
 /// ## Example
 ///
 /// ```
-/// use compress_lib::arithmetic_encode;
+/// use generic_compression::arithmetic_encode;
 /// use num::rational::Ratio;
 ///
 /// let input = vec![0, 1, 0, 1];
@@ -80,7 +80,7 @@ pub fn arithmetic_encode<
 /// ## Example
 ///
 /// ```
-/// use compress_lib::{arithmetic_decode, arithmetic_encode};
+/// use generic_compression::{arithmetic_decode, arithmetic_encode};
 /// use num::Rational32;
 ///
 /// let input = vec![0, 1, 0, 1];

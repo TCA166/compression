@@ -83,7 +83,7 @@ impl<T: Clone> LZ78entry<T> {
 /// ## Example
 ///
 /// ```
-/// use compress_lib::{lz78_encode, lz78_decode};
+/// use generic_compression::{lz78_encode, lz78_decode};
 /// let input = b"rabarbarbar";
 /// let encoded = lz78_encode(input, 4, 4);
 /// assert!(encoded.len() < input.len());
@@ -160,7 +160,7 @@ pub fn lz78_encode<T: Clone + PartialEq + Debug>(
 /// ## Example
 ///
 /// ```
-/// use compress_lib::{lz78_encode, lz78_decode};
+/// use generic_compression::{lz78_encode, lz78_decode};
 /// let input = b"rabarbarbar";
 /// let encoded = lz78_encode(input, 4, 4);
 /// assert!(encoded.len() < input.len());

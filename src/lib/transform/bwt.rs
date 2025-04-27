@@ -12,7 +12,7 @@
 /// ## Example
 ///
 /// ```
-/// use compress_lib::encode_bwt;
+/// use generic_compression::encode_bwt;
 /// let input = b"banana";
 /// let (encoded, index) = encode_bwt(input);
 /// assert_eq!(encoded, vec![b'n', b'n', b'b', b'a', b'a', b'a']);
@@ -48,7 +48,7 @@ pub fn encode_bwt<T: Clone + Ord>(input: &[T]) -> (Vec<T>, usize) {
 /// ## Example
 ///
 /// ```
-/// use compress_lib::{decode_bwt, encode_bwt};
+/// use generic_compression::{decode_bwt, encode_bwt};
 /// let input = b"banana";
 /// let (encoded, index) = encode_bwt(input);
 /// let decoded = decode_bwt(&encoded, index);
