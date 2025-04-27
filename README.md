@@ -1,6 +1,9 @@
 # generic_compression
 
 [![Rust](https://github.com/TCA166/compression/actions/workflows/rust.yml/badge.svg)](https://github.com/TCA166/compression/actions/workflows/rust.yml)
+[![Crates.io Version](https://img.shields.io/crates/v/generic_compression)](https://crates.io/crates/generic_compression)
+[![docs.rs](https://img.shields.io/docsrs/generic_compression)](https://docs.rs/generic_compression)
+[![License](https://img.shields.io/crates/l/generic_compression)](LICENSE)
 
 A simple Rust library and repository providing generic implementation of
 compression algorithms. Instead of providing end-to-end compression for byte
