@@ -1,14 +1,14 @@
 [package]
-name = "compression"
+name = "generic_compression"
 version = "0.1.0"
 edition = "2024"
 authors = ["TCA"]
-description = "A library providing implementations of generic compression algorithms."
+description = "A library providing generic implementations of common compression algorithms."
 license = "GPLv3"
 readme = "README.md"
 repository = "https://github.com/TCA166/compression"
 categories = ["compression", "algorithms", "command-line-utilities"]
-keywords = ["compression", "lzw", "lz77", "lz78"]
+keywords = ["compression", "lzw", "huffman", "encoding", "decoding"]
 
 [dependencies]
 bits-io = "0.5.2"
@@ -22,9 +22,9 @@ serde = ["dep:serde"]
 
 
 [lib]
-name = "compress_lib"
+name = "generic_compression"
 path = "src/lib/lib.rs"
 
 [[bin]]
-name = "compress_bin"
+name = "generic_compression_cli"
 path = "src/bin/bin.rs"

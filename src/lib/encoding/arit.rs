@@ -1,19 +1,20 @@
-use num::rational::Ratio;
+use num::{Integer, One, Unsigned, Zero, rational::Ratio};
+use num_traits::{NumAssignOps, NumOps};
 
-type Rational32 = Ratio<u32>;
+use std::{collections::HashMap, hash::Hash, iter::Sum};
 
-use std::{collections::HashMap, hash::Hash};
-
-fn weights_to_ranges<T: Hash + Eq>(weights: &[(T, u32)]) -> HashMap<&T, (Rational32, Rational32)> {
+fn weights_to_ranges<T: Hash + Eq, U: Integer + Clone + NumOps + NumAssignOps + Sum>(
+    weights: &[(T, U)],
+) -> HashMap<&T, (Ratio<U>, Ratio<U>)> {
     let mut ranges = HashMap::with_capacity(weights.len());
-    let sum = weights.iter().map(|(_, weight)| *weight).sum::<u32>();
-    let mut total_weight = Rational32::from_integer(0);
+    let sum = weights.iter().map(|(_, weight)| weight.clone()).sum::<U>();
+    let mut total_weight: Ratio<U> = Ratio::zero();
     for (key, weight) in weights.iter() {
-        let l_weight = total_weight;
-        total_weight += Rational32::new(*weight, sum);
-        ranges.insert(key, (l_weight, total_weight));
+        let l_weight = total_weight.clone();
+        total_weight += Ratio::new(weight.clone(), sum.clone());
+        ranges.insert(key, (l_weight, total_weight.clone()));
     }
-    if total_weight != Rational32::from_integer(1) {
+    if total_weight.clone() != Ratio::one() {
         panic!("Weights do not sum to 1");
     }
     ranges
@@ -43,17 +44,24 @@ fn weights_to_ranges<T: Hash + Eq>(weights: &[(T, u32)]) -> HashMap<&T, (Rationa
 /// let encoded = arithmetic_encode(&input, &weights);
 /// assert_eq!(encoded, Ratio::<u32>::new(47, 512));
 /// ```
-pub fn arithmetic_encode<T: Hash + Eq>(input: &[T], weights: &[(T, u32)]) -> Rational32 {
+pub fn arithmetic_encode<
+    T: Hash + Eq,
+    U: Unsigned + Integer + Clone + NumOps + NumAssignOps + Sum,
+>(
+    input: &[T],
+    weights: &[(T, U)],
+) -> Ratio<U> {
     let ranges = weights_to_ranges(weights);
-    let mut l = Rational32::from_integer(0);
-    let mut r = Rational32::from_integer(1);
+    let mut l = Ratio::zero();
+    let mut r = Ratio::one();
     for symbol in input {
         let (l_weight, r_weight) = ranges.get(symbol).unwrap();
-        let range = r - l;
-        r = l + range * r_weight;
+        let range = r - l.clone();
+        r = l.clone() + range.clone() * r_weight;
         l = l + range * l_weight;
     }
-    return (r + l) / Rational32::from_integer(2);
+
+    return (r + l) / (U::one() + U::one());
 }
 
 /// Decode a sequence of symbols using arithmetic decoding.
@@ -76,27 +84,30 @@ pub fn arithmetic_encode<T: Hash + Eq>(input: &[T], weights: &[(T, u32)]) -> Rat
 /// use num::Rational32;
 ///
 /// let input = vec![0, 1, 0, 1];
-/// let weights = [(0, 1), (1, 3)];
-/// let encoded = arithmetic_encode(&input, &weights);
-/// let decoded = arithmetic_decode(encoded, &weights, input.len());
+/// let weights: &[(u8, u32)] = &[(0, 1), (1, 3)];
+/// let encoded = arithmetic_encode(&input, weights);
+/// let decoded = arithmetic_decode(encoded, weights, input.len());
 /// assert_eq!(decoded, input);
 ///
-pub fn arithmetic_decode<T: Hash + Eq + Clone>(
-    input: Rational32,
-    weights: &[(T, u32)],
+pub fn arithmetic_decode<
+    T: Hash + Eq + Clone,
+    U: Unsigned + Integer + Clone + NumOps + NumAssignOps + Sum,
+>(
+    input: Ratio<U>,
+    weights: &[(T, U)],
     length: usize,
 ) -> Vec<T> {
     let ranges = weights_to_ranges(weights);
-    let mut l = Rational32::from_integer(0);
-    let mut r = Rational32::from_integer(1);
+    let mut l = Ratio::zero();
+    let mut r = Ratio::one();
     let mut output: Vec<T> = Vec::with_capacity(length);
     for _ in 0..length {
-        let d = r - l;
-        let x = (input - l) / d;
+        let d = r.clone() - l.clone();
+        let x = (input.clone() - l.clone()) / d.clone();
         for (key, (l_weight, r_weight)) in ranges.iter() {
             if x >= *l_weight && x < *r_weight {
                 output.push((*key).clone());
-                r = l + d * r_weight;
+                r = l.clone() + d.clone() * r_weight;
                 l = l + d * l_weight;
                 break;
             }
@@ -111,17 +122,17 @@ mod tests {
 
     #[test]
     fn test_arithmetic_encode() {
-        let input = b"abcd";
-        let weights = [(b'a', 1), (b'b', 1), (b'c', 1), (b'd', 1)];
+        let input = "abcd";
+        let weights: &[(u8, u32)] = &[(b'a', 1), (b'b', 1), (b'c', 1), (b'd', 1)];
 
-        let encoded = arithmetic_encode(input, &weights);
-        assert_eq!(encoded, Rational32::new(55, 512));
+        let encoded = arithmetic_encode(input.as_ref(), weights);
+        assert_eq!(encoded, Ratio::new(55, 512));
     }
 
     #[test]
     fn test_arithmetic_decode() {
-        let input = Rational32::new(55, 512);
-        let weights = [(b'a', 1), (b'b', 1), (b'c', 1), (b'd', 1)];
+        let input = Ratio::new(55, 512);
+        let weights: &[(u8, u32)] = &[(b'a', 1), (b'b', 1), (b'c', 1), (b'd', 1)];
         let length = 4;
 
         let decoded = arithmetic_decode(input, &weights, length);

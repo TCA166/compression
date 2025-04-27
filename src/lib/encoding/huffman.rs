@@ -65,7 +65,7 @@ impl<T: Clone + Eq, W: Integer + Clone> HuffmanEncoding<T, W> {
     }
 
     fn encode_and_index(&self, value: &T) -> Option<(BitVec, usize)> {
-        let mut stack = vec![(0, bitvec![0; 1])];
+        let mut stack = vec![(0, bitvec![0; 1]), (1, bitvec!(1; 1))];
         while let Some((index, bits)) = stack.pop() {
             if index < self.root.len() {
                 if self.root[index].value == *value {

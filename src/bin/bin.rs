@@ -1,4 +1,4 @@
-use compress_lib::*;
+use generic_compression::*;
 
 use std::{
     fs::{File, read},

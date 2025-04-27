@@ -1,4 +1,4 @@
-use compress_lib::{LZ77entry, LZ78entry};
+use generic_compression::{LZ77entry, LZ78entry};
 use num_traits::FromBytes;
 
 use std::{error, io::Read};
