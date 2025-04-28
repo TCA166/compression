@@ -15,7 +15,7 @@
 /// ## Example
 ///
 /// ```
-/// use generic_compression::lzw_encode;
+/// use generic_compression::lzw::lzw_encode;
 /// let input = b"ABABABABA";
 /// let initial = b"AB";
 /// let encoded = lzw_encode(input, initial, 4);
@@ -89,7 +89,7 @@ pub fn lzw_encode<T: Clone + PartialEq>(
 /// ## Example
 ///
 /// ```
-/// use generic_compression::{lzw_decode, lzw_encode};
+/// use generic_compression::lzw::{lzw_decode, lzw_encode};
 /// let input = b"ABABABABA";
 /// let initial = b"AB";
 /// let encoded = lzw_encode(input, initial, 4);
@@ -107,31 +107,26 @@ pub fn lzw_decode<T: Clone + PartialEq>(input: &[usize], initial: &[T]) -> Vec<T
     while i < input.len() {
         // we get the token
         let idx = input[i];
-        if idx < dictionary.len() {
-            // if it is ok to read, we read it
-            let entry = dictionary[idx].clone();
-            output.extend(entry.clone()); // decode it
-            if i + 1 < input.len() {
-                let next_idx = input[i + 1];
-                if next_idx < dictionary.len() {
-                    // if it's a simple token we just add it to the dictionary
-                    let next_entry = dictionary[next_idx].clone();
-                    let mut new_entry = entry.clone();
-                    new_entry.push(next_entry[0].clone());
-                    if !dictionary.contains(&new_entry) {
-                        dictionary.push(new_entry);
-                    }
-                } else {
-                    // well this is the unique case
-                    let mut new_entry = entry.clone();
-                    new_entry.push(entry[0].clone()); // instead of next_entry[0]
-                    if !dictionary.contains(&new_entry) {
-                        dictionary.push(new_entry);
-                    }
+        let entry = dictionary[idx].clone();
+        output.extend(entry.clone()); // decode it
+        if i + 1 < input.len() {
+            let next_idx = input[i + 1];
+            if next_idx < dictionary.len() {
+                // if it's a simple token we just add it to the dictionary
+                let next_entry = dictionary[next_idx].clone();
+                let mut new_entry = entry.clone();
+                new_entry.push(next_entry[0].clone());
+                if !dictionary.contains(&new_entry) {
+                    dictionary.push(new_entry);
+                }
+            } else {
+                // well this is the unique case
+                let mut new_entry = entry.clone();
+                new_entry.push(entry[0].clone()); // instead of next_entry[0]
+                if !dictionary.contains(&new_entry) {
+                    dictionary.push(new_entry);
                 }
             }
-        } else {
-            panic!("Index out of bounds in dictionary");
         }
         i += 1;
     }

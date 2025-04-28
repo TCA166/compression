@@ -1,4 +1,7 @@
-use generic_compression::{LZ77entry, LZ77tuple, LZ78entry, LZ78tuple};
+use generic_compression::{
+    lz77::{LZ77entry, LZ77tuple},
+    lz78::{LZ78entry, LZ78tuple},
+};
 use num_traits::ToBytes;
 
 use std::{

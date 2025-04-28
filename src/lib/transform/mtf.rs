@@ -12,7 +12,7 @@
 /// ## Example
 ///
 /// ```
-/// use generic_compression::encode_move_to_front;
+/// use generic_compression::mtf::encode_move_to_front;
 /// let input = vec!['h', 'e', 'l', 'l', 'o'];
 /// let mut ordering = vec!['e', 'h', 'l', 'o'];
 /// let encoded = encode_move_to_front(&input, &mut ordering);
@@ -46,7 +46,7 @@ pub fn encode_move_to_front<T: Eq + Clone>(input: &[T], ordering: &mut Vec<T>) -
 /// ## Example
 ///
 /// ```
-/// use generic_compression::{decode_move_to_front, encode_move_to_front};
+/// use generic_compression::mtf::{decode_move_to_front, encode_move_to_front};
 /// let input = vec!['h', 'e', 'l', 'l', 'o'];
 /// let mut ordering = vec!['e', 'h', 'l', 'o'];
 /// let encoded = encode_move_to_front(&input, &mut ordering.clone());
