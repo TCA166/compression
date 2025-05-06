@@ -18,7 +18,7 @@ use num_traits::{FromBytes, ToBytes};
 /// ## Example
 ///
 /// ```
-/// use generic_compression::elias::gamma_encode;
+/// use generic_compression::encoding::elias::gamma_encode;
 /// use bits_io::{bits, bit_types::BitVec};
 ///
 /// let mut buffer = BitVec::new();
@@ -54,7 +54,7 @@ pub fn gamma_encode<I: ToBytes<Bytes: Send + 'static>>(value: I, out: &mut BitVe
 /// ## Example
 ///
 /// ```
-/// use generic_compression::elias::gamma_decode;
+/// use generic_compression::encoding::elias::gamma_decode;
 /// use bits_io::{bits, bit_types::BitVec};
 ///
 /// let mut buffer = bits![0, 0, 0, 1, 0, 0, 1];
@@ -81,6 +81,70 @@ pub fn gamma_decode<const N: usize, I: FromBytes<Bytes = [u8; N]>, R: BitRead>(
     Ok(I::from_be_bytes(&buff))
 }
 
+/// Encodes a value using Elias delta encoding.
+///
+/// ## Arguments
+///
+/// - `value`: The value to be encoded.
+/// - `out`: The output buffer to store the encoded bits.
+///
+/// ## Example
+///
+/// ```
+/// use generic_compression::encoding::elias::delta_encode;
+/// use bits_io::{bits, bit_types::BitVec};
+///
+/// let mut buffer = BitVec::new();
+/// delta_encode(8, &mut buffer);
+/// assert_eq!(buffer, bits![0, 0, 1, 0, 0, 0, 0, 0]);
+/// ```
+pub fn delta_encode<I: ToBytes<Bytes: Send + 'static>>(value: I, out: &mut BitVec) {
+    let bytes = value.to_be_bytes();
+    // we get a slice of big endian bytes
+    let bits = Bits::from_owner_bytes(bytes);
+    if let Some(first_one) = bits.first_one() {
+        // write the number of bits in the value
+        let num_bits = bits.len() - first_one;
+        gamma_encode(num_bits, out);
+        out.extend_from_bitslice(&bits[first_one + 1..]);
+    } else {
+        panic!("Cannot encode zero");
+    }
+}
+
+/// Decodes a value using Elias delta encoding.
+///
+/// ## Arguments
+///
+/// - `state`: The input stream to read the encoded bits from.
+///
+/// ## Returns
+///
+/// - `Result<I, Box<dyn std::error::Error>>` - The decoded value or an error.
+///
+/// ## Example
+///
+/// ```
+/// use generic_compression::encoding::elias::delta_decode;
+/// use bits_io::{bits, bit_types::BitVec};
+///
+/// let mut buffer = bits![0, 0, 1, 0, 0, 0, 0, 0];
+/// let decoded_value: u32 = delta_decode(&mut buffer).unwrap();
+/// assert_eq!(decoded_value, 8);
+/// ```
+pub fn delta_decode<const N: usize, I: FromBytes<Bytes = [u8; N]>, R: BitRead>(
+    state: &mut R,
+) -> Result<I, Box<dyn std::error::Error>> {
+    let num_bits: usize = gamma_decode(state)?;
+    let mut buff = [0u8; N];
+    let slice = BitSlice::from_slice_mut(&mut buff);
+    let slice_len = slice.len();
+    slice.set(slice_len - num_bits, true);
+    state.read_bits_exact(&mut slice[slice_len - num_bits + 1..slice_len])?;
+
+    Ok(I::from_be_bytes(&buff))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,5 +155,26 @@ mod tests {
         let mut buffer = BitVec::new();
         gamma_encode(42, &mut buffer);
         assert_eq!(buffer, bits![0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0]);
+    }
+
+    #[test]
+    fn test_gamma_decode() {
+        let mut buffer = bits![0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0];
+        let decoded_value: u32 = gamma_decode(&mut buffer).unwrap();
+        assert_eq!(decoded_value, 42);
+    }
+
+    #[test]
+    fn test_delta_encode() {
+        let mut buffer = BitVec::new();
+        delta_encode(42, &mut buffer);
+        assert_eq!(buffer, bits![0, 0, 1, 1, 0, 0, 1, 0, 1, 0]);
+    }
+
+    #[test]
+    fn test_delta_decode() {
+        let mut buffer = bits![0, 0, 1, 1, 0, 0, 1, 0, 1, 0];
+        let decoded_value: u32 = delta_decode(&mut buffer).unwrap();
+        assert_eq!(decoded_value, 42);
     }
 }

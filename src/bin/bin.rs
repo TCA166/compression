@@ -1,4 +1,7 @@
-use generic_compression::{bwt::*, lz77::*, lz78::*, lzw::*, mtf::*};
+use generic_compression::{
+    lz::{lz77::*, lz78::*, lzw::*},
+    transform::{bwt::*, mtf::*},
+};
 
 use std::{
     fs::{File, read},

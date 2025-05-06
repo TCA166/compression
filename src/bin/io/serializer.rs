@@ -1,4 +1,4 @@
-use generic_compression::{
+use generic_compression::lz::{
     lz77::{LZ77entry, LZ77tuple},
     lz78::{LZ78entry, LZ78tuple},
 };

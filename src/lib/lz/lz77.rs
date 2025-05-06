@@ -5,7 +5,6 @@
 ///
 /// In this implementation, we use a struct to represent the entry.
 /// This is more Rust-idiomatic and allows us to use the `serde` crate for serialization and deserialization.
-#[derive(Debug)]
 pub struct LZ77entry<T> {
     offset: usize,
     length: usize,
@@ -73,7 +72,7 @@ mod lz77_serde {
 /// ## Example
 ///
 /// ```
-/// use generic_compression::lz77::lz77_encode;
+/// use generic_compression::lz::lz77::lz77_encode;
 /// let input = b"ABABABABA";
 /// let encoded = lz77_encode(input, 4, 4);
 /// assert!(encoded.len() < input.len());
@@ -148,7 +147,7 @@ pub fn lz77_encode<T: PartialEq + Clone>(
 /// ## Example
 ///
 /// ```
-/// use generic_compression::lz77::{lz77_decode, lz77_encode};
+/// use generic_compression::lz::lz77::{lz77_decode, lz77_encode};
 /// let input = b"ABABABABA";
 /// let encoded = lz77_encode(input, 4, 4);
 /// assert!(encoded.len() < input.len());

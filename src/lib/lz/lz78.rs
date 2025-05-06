@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 /// A struct to represent an LZ78 entry
 /// It contains an index to the dictionary and the next character.
 /// The index is `None` if the entry is a new character.
@@ -83,12 +81,12 @@ impl<T: Clone> LZ78entry<T> {
 /// ## Example
 ///
 /// ```
-/// use generic_compression::lz78::{lz78_encode, lz78_decode};
+/// use generic_compression::lz::lz78::{lz78_encode, lz78_decode};
 /// let input = b"rabarbarbar";
 /// let encoded = lz78_encode(input, 4, 4);
 /// assert!(encoded.len() < input.len());
 /// ```
-pub fn lz78_encode<T: Clone + PartialEq + Debug>(
+pub fn lz78_encode<T: Clone + PartialEq>(
     input: &[T],
     lookahead_max: usize,
     max_dictionary_size: usize,
@@ -161,7 +159,7 @@ pub fn lz78_encode<T: Clone + PartialEq + Debug>(
 /// ## Example
 ///
 /// ```
-/// use generic_compression::lz78::{lz78_encode, lz78_decode};
+/// use generic_compression::lz::lz78::{lz78_encode, lz78_decode};
 /// let input = b"rabarbarbar";
 /// let encoded = lz78_encode(input, 4, 4);
 /// assert!(encoded.len() < input.len());

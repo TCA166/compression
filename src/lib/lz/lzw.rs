@@ -15,7 +15,7 @@
 /// ## Example
 ///
 /// ```
-/// use generic_compression::lzw::lzw_encode;
+/// use generic_compression::lz::lzw::lzw_encode;
 /// let input = b"ABABABABA";
 /// let initial = b"AB";
 /// let encoded = lzw_encode(input, initial, 4);
@@ -89,7 +89,7 @@ pub fn lzw_encode<T: Clone + PartialEq>(
 /// ## Example
 ///
 /// ```
-/// use generic_compression::lzw::{lzw_decode, lzw_encode};
+/// use generic_compression::lz::lzw::{lzw_decode, lzw_encode};
 /// let input = b"ABABABABA";
 /// let initial = b"AB";
 /// let encoded = lzw_encode(input, initial, 4);
